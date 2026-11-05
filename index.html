@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Project</title>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Clicker Game</h1>
+      <div class="controls">
+        <input type="text" id="player-input" placeholder="Введите цель..." />
+        <button id="add-btn">Добавить цель</button>
+        <button id="reset-btn">Сбросить сохранение</button>
+      </div>
+
+      <div class="stats">
+        <span>Счёт: <strong id="score-display">0</strong></span>
+        <span
+          >Скорость объекта: <strong id="speed-display">0</strong> px/s</span
+        >
+      </div>
+
+      <h2>Активные цели:</h2>
+      <ul id="items-list"></ul>
+
+      <div id="game-area">
+        <div id="moving-target"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
