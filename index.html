@@ -3,31 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Game Project</title>
+    <title>Словоловка</title>
   </head>
   <body>
-    <div id="app">
-      <h1>Clicker Game</h1>
-      <div class="controls">
-        <input type="text" id="player-input" placeholder="Введите цель..." />
-        <button id="add-btn">Добавить цель</button>
-        <button id="reset-btn">Сбросить сохранение</button>
-      </div>
+    <main id="app">
+      <h1>Словоловка</h1>
+      <p id="message"></p>
 
       <div class="stats">
-        <span>Счёт: <strong id="score-display">0</strong></span>
-        <span
-          >Скорость объекта: <strong id="speed-display">0</strong> px/s</span
-        >
+        <span>Счёт <strong id="score">0</strong></span>
+        <span>Рекорд <strong id="best">0</strong></span>
+        <span>Уровень <strong id="level">1</strong></span>
+        <span>Скорость <strong id="speed">0</strong> px/s</span>
+        <span>Очередь <strong id="queue">0</strong></span>
+        <span>Ошибки <strong id="misses">0</strong></span>
       </div>
-
-      <h2>Активные цели:</h2>
-      <ul id="items-list"></ul>
 
       <div id="game-area">
-        <div id="moving-target"></div>
+        <div id="ball"></div>
       </div>
-    </div>
+
+      <ul id="words"></ul>
+
+      <div class="controls">
+        <input
+          type="text"
+          id="word-input"
+          maxlength="20"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          autofocus
+          placeholder="Введите слово..."
+        />
+        <button id="submit-btn">Ввести</button>
+        <button id="restart-btn">Новая игра</button>
+      </div>
+
+      <p class="rules">
+        Шарик отскакивает от стен, и при каждом ударе в списке появляется новое
+        слово. Набирайте слова из списка и нажимайте Enter. Если список
+        переполнится или вы сделаете 5 ошибок, игра закончится. Шарик ускоряется
+        с каждым новым уровнем и с каждой ошибкой.
+      </p>
+    </main>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

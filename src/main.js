@@ -1,156 +1,187 @@
 import confetti from "canvas-confetti";
 import "./style.css";
 import {
-  createGameState,
-  addItem,
-  removeItem,
-  updatePosition,
-  parseSaveData,
+  MAX_MISSES,
+  MAX_WORDS,
+  advance,
+  createGame,
+  getLevel,
+  getSpeed,
+  parseBall,
+  parseSave,
+  submitWord,
 } from "./gameLogic.js";
 
-const STORAGE_KEY = "my_game_save_v1";
-const SAVE_INTERVAL_MS = 1000;
+const SAVE_KEY = "word_catcher_save_v1";
+const BALL_KEY = "word_catcher_ball_v1";
 
-const inputEl = document.getElementById("player-input");
-const addBtn = document.getElementById("add-btn");
-const resetBtn = document.getElementById("reset-btn");
-const listEl = document.getElementById("items-list");
-const scoreDisplay = document.getElementById("score-display");
-const speedDisplay = document.getElementById("speed-display");
+const messageEl = document.getElementById("message");
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const levelEl = document.getElementById("level");
+const speedEl = document.getElementById("speed");
+const queueEl = document.getElementById("queue");
+const missesEl = document.getElementById("misses");
 const gameAreaEl = document.getElementById("game-area");
-const targetEl = document.getElementById("moving-target");
+const ballEl = document.getElementById("ball");
+const wordsEl = document.getElementById("words");
+const inputEl = document.getElementById("word-input");
+const submitBtn = document.getElementById("submit-btn");
+const restartBtn = document.getElementById("restart-btn");
 
-function readSave() {
+function readStored(storage, key) {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return storage.getItem(key);
   } catch {
     return null;
   }
 }
 
-// Последнее значение, которое игра сама записала (или прочитала при старте).
-// Если сохранение изменили снаружи (например, испортили в DevTools),
-// игра его не затирает: после перезагрузки начнётся новая игра.
-let lastKnownSave = readSave();
-
-function writeSave(state) {
+function writeStored(storage, key, value) {
   try {
-    if (localStorage.getItem(STORAGE_KEY) !== lastKnownSave) return;
-    const json = JSON.stringify(state);
-    localStorage.setItem(STORAGE_KEY, json);
-    lastKnownSave = json;
+    storage.setItem(key, JSON.stringify(value));
   } catch {
-    // Хранилище недоступно (приватный режим, квота): играем без сохранения
+    return;
   }
 }
 
-function clearSave() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    lastKnownSave = null;
-  } catch {
-    // см. выше
-  }
-}
+const saved = parseSave(readStored(localStorage, SAVE_KEY));
+const ball = parseBall(readStored(sessionStorage, BALL_KEY));
+let state = saved ? { ...saved, ...ball } : createGame();
+writeStored(localStorage, SAVE_KEY, state);
+let draft = "";
+let needsFocus = false;
 
-let state = parseSaveData(lastKnownSave);
-
-// Обработчики событий только меняют состояние и ставят флаги.
-// Всё, что трогает DOM (список, поле ввода, конфетти), делает applyToDom
-// в игровом цикле.
-const pending = {
-  renderList: true,
-  clearInput: null,
-  confetti: false,
-};
-
-addBtn.addEventListener("click", submitItem);
-inputEl.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") submitItem();
+inputEl.addEventListener("input", () => {
+  draft = inputEl.value;
 });
 
-function submitItem() {
-  const next = addItem(state, inputEl.value);
+function submit() {
+  const next = submitWord(state, draft);
   if (next === state) return;
   state = next;
-  pending.renderList = true;
-  pending.clearInput = inputEl.value;
-  pending.confetti = true;
+  draft = "";
+  needsFocus = true;
+  writeStored(localStorage, SAVE_KEY, state);
 }
 
-listEl.addEventListener("click", (event) => {
-  const id = Number(event.target.dataset?.removeId);
-  if (!Number.isFinite(id)) return;
-  state = removeItem(state, id);
-  pending.renderList = true;
+inputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") submit();
 });
 
-resetBtn.addEventListener("click", () => {
-  clearSave();
-  state = createGameState();
-  pending.renderList = true;
+submitBtn.addEventListener("click", submit);
+
+restartBtn.addEventListener("click", () => {
+  state = createGame(state.best);
+  draft = "";
+  needsFocus = true;
+  writeStored(localStorage, SAVE_KEY, state);
 });
 
-let lastFrameTime = null;
-let lastSaveTime = 0;
+let lastTime = null;
+let shownItems = null;
+let shownLevel = getLevel(state);
+let shownMisses = state.misses;
 
-// После возврата на вкладку время кадра считаем заново, чтобы не было рывка.
 document.addEventListener("visibilitychange", () => {
-  lastFrameTime = null;
-  if (document.visibilityState === "hidden") writeSave(state);
+  lastTime = null;
 });
-window.addEventListener("pagehide", () => writeSave(state));
 
-function renderList() {
-  listEl.replaceChildren(
-    ...state.items.map((item) => {
-      const li = document.createElement("li");
-      const label = document.createElement("span");
-      label.textContent = item.text;
-      const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "Удалить";
-      deleteBtn.dataset.removeId = item.id;
-      li.append(label, deleteBtn);
-      return li;
-    })
+window.addEventListener("pagehide", () => {
+  const { position, direction } = state;
+  writeStored(sessionStorage, BALL_KEY, { position, direction });
+});
+
+function setText(element, value) {
+  const text = String(value);
+  if (element.textContent !== text) element.textContent = text;
+}
+
+function renderWords() {
+  if (state.items !== shownItems) {
+    shownItems = state.items;
+    wordsEl.replaceChildren(
+      ...state.items.map((word) => {
+        const li = document.createElement("li");
+        li.textContent = word;
+        return li;
+      })
+    );
+  }
+  const prefix = draft.trim().toLowerCase();
+  for (const li of wordsEl.children) {
+    li.classList.toggle(
+      "match",
+      prefix !== "" && li.textContent.startsWith(prefix)
+    );
+  }
+}
+
+function renderStats() {
+  setText(scoreEl, state.score);
+  setText(bestEl, state.best);
+  setText(levelEl, getLevel(state));
+  setText(speedEl, getSpeed(state));
+  setText(queueEl, `${state.items.length}/${MAX_WORDS}`);
+  setText(missesEl, `${state.misses}/${MAX_MISSES}`);
+  setText(
+    messageEl,
+    state.status === "over"
+      ? "Игра окончена. Нажмите «Новая игра»"
+      : "Печатайте слово из списка и нажимайте Enter"
   );
 }
 
-function applyToDom() {
-  if (pending.renderList) {
-    pending.renderList = false;
-    renderList();
-  }
-  if (pending.clearInput !== null) {
-    // Очищаем поле, только если пользователь уже не начал вводить новый текст
-    if (inputEl.value === pending.clearInput) inputEl.value = "";
-    pending.clearInput = null;
+function renderControls() {
+  const over = state.status === "over";
+  gameAreaEl.classList.toggle("over", over);
+  inputEl.disabled = over;
+  submitBtn.disabled = over;
+  if (inputEl.value !== draft) inputEl.value = draft;
+  if (needsFocus && !over) {
+    needsFocus = false;
     inputEl.focus();
   }
-  if (pending.confetti) {
-    pending.confetti = false;
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
-  }
-
-  scoreDisplay.textContent = state.score;
-  speedDisplay.textContent = Math.round(Math.abs(state.speed));
-  targetEl.style.transform = `translateX(${state.position}px)`;
 }
 
-function gameLoop(currentTime) {
-  const dt = lastFrameTime === null ? 0 : (currentTime - lastFrameTime) / 1000;
-  lastFrameTime = currentTime;
-
-  const maxBounds = Math.max(gameAreaEl.clientWidth - targetEl.offsetWidth, 0);
-  state = updatePosition(state, dt, maxBounds);
-  applyToDom();
-
-  if (currentTime - lastSaveTime >= SAVE_INTERVAL_MS) {
-    lastSaveTime = currentTime;
-    writeSave(state);
+function renderEffects() {
+  const level = getLevel(state);
+  if (level > shownLevel) {
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 } });
   }
+  shownLevel = level;
 
-  requestAnimationFrame(gameLoop);
+  if (state.misses > shownMisses) {
+    inputEl.animate(
+      [
+        { transform: "translateX(0)" },
+        { transform: "translateX(-6px)" },
+        { transform: "translateX(6px)" },
+        { transform: "translateX(0)" },
+      ],
+      { duration: 200 }
+    );
+  }
+  shownMisses = state.misses;
 }
 
-requestAnimationFrame(gameLoop);
+function frame(time) {
+  const dt = lastTime === null ? 0 : (time - lastTime) / 1000;
+  lastTime = time;
+
+  const next = advance(state, dt, gameAreaEl.clientWidth - ballEl.offsetWidth);
+  if (next.items !== state.items || next.status !== state.status) {
+    writeStored(localStorage, SAVE_KEY, next);
+  }
+  state = next;
+
+  renderWords();
+  renderStats();
+  renderControls();
+  renderEffects();
+  ballEl.style.transform = `translateX(${state.position}px)`;
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);

@@ -13,13 +13,12 @@ export default [
         window: "readonly",
         document: "readonly",
         localStorage: "readonly",
+        sessionStorage: "readonly",
         requestAnimationFrame: "readonly",
-        cancelAnimationFrame: "readonly",
       },
     },
     rules: {
-      "no-unused-vars": "warn",
-      "no-console": "off",
+      "no-unused-vars": "error",
     },
   },
 ];
