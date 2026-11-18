@@ -77,9 +77,6 @@ h1 {
 #ball {
   position: absolute;
   top: 15px;
-  left: 0;
-  width: 30px;
-  height: 30px;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 14px var(--accent);
@@ -148,4 +145,13 @@ button:disabled {
   margin-top: 20px;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
