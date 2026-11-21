@@ -1,4 +1,4 @@
-export const WORDS = [
+export const WORDS: readonly string[] = [
   "цикл",
   "сайт",
   "файл",
