@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Словоловка</title>
+  </head>
+  <body>
+    <main id="app">
+      <h1>Словоловка</h1>
+      <p id="message"></p>
+
+      <div class="stats">
+        <span>Счёт <strong id="score">0</strong></span>
+        <span>Рекорд <strong id="best">0</strong></span>
+        <span>Уровень <strong id="level">1</strong></span>
+        <span>Скорость <strong id="speed">0</strong> px/s</span>
+        <span>Очередь <strong id="queue">0</strong></span>
+        <span>Ошибки <strong id="misses">0</strong></span>
+      </div>
+
+      <div id="game-area">
+        <div id="ball"></div>
+      </div>
+
+      <ul id="words"></ul>
+
+      <div class="controls">
+        <input
+          type="text"
+          id="word-input"
+          maxlength="20"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          autofocus
+          placeholder="Введите слово..."
+        />
+        <button id="submit-btn">Ввести</button>
+        <button id="restart-btn">Новая игра</button>
+      </div>
+
+      <p class="rules">
+        Шарик отскакивает от стен, и при каждом ударе в списке появляется новое
+        слово. Набирайте слова из списка и нажимайте Enter. Если список
+        переполнится или вы сделаете 5 ошибок, игра закончится. Шарик ускоряется
+        с каждым новым уровнем и с каждой ошибкой.
+      </p>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
