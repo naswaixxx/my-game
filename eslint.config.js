@@ -1,24 +1,14 @@
 import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
-export default [
-  {
-    ignores: [".vs/**", "node_modules/**", "dist/**"],
-  },
+export default tseslint.config(
+  { ignores: [".vs/**", "node_modules/**", "dist/**"] },
   js.configs.recommended,
+  tseslint.configs.recommended,
   {
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: {
-        window: "readonly",
-        document: "readonly",
-        localStorage: "readonly",
-        sessionStorage: "readonly",
-        requestAnimationFrame: "readonly",
-      },
     },
-    rules: {
-      "no-unused-vars": "error",
-    },
-  },
-];
+  }
+);
