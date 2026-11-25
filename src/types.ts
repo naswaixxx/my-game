@@ -12,10 +12,19 @@ export interface GameState {
   readonly draft: string;
   readonly position: number;
   readonly direction: Direction;
+  readonly seed: number;
 }
 
 export type GameAction =
-  | { readonly type: "tick"; readonly dt: number; readonly roll: number }
+  | {
+      readonly type: "tick";
+      readonly dt: number;
+      readonly pool: readonly string[];
+    }
   | { readonly type: "input"; readonly value: string }
   | { readonly type: "submit" }
-  | { readonly type: "restart"; readonly roll: number };
+  | {
+      readonly type: "restart";
+      readonly seed: number;
+      readonly pool: readonly string[];
+    };

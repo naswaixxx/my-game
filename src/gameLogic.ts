@@ -1,11 +1,12 @@
+import { nextRandom } from "./random.ts";
 import type { GameAction, GameState } from "./types.ts";
-import { WORDS } from "./words.ts";
 
 export const FIELD_WIDTH = 600;
 export const MAX_WORDS = 8;
 export const MAX_MISSES = 5;
 export const MAX_DRAFT_LENGTH = 20;
 export const WORDS_PER_LEVEL = 5;
+export const MIN_WORD_LENGTH = 3;
 
 const START_WORDS = 2;
 const BASE_SPEED = 160;
@@ -13,10 +14,7 @@ const SPEED_STEP = 25;
 const MISS_SPEED_STEP = 10;
 const MAX_SPEED = 520;
 const COUNT_LIMIT = 1_000_000_000;
-const MIN_WORD_LENGTH = Math.min(...WORDS.map((word) => word.length));
-const MAX_WORD_LENGTH = Math.max(...WORDS.map((word) => word.length));
-
-type Random = () => number;
+const WORD_PATTERN = /^[а-яё]+(?:-[а-яё]+)*$/;
 
 const isCount = (value: unknown): value is number =>
   typeof value === "number" &&
@@ -24,8 +22,11 @@ const isCount = (value: unknown): value is number =>
   value >= 0 &&
   value <= COUNT_LIMIT;
 
-const isKnownWord = (value: unknown): value is string =>
-  typeof value === "string" && WORDS.includes(value);
+export const isPlayableWord = (value: unknown): value is string =>
+  typeof value === "string" &&
+  value.length >= MIN_WORD_LENGTH &&
+  value.length <= MAX_DRAFT_LENGTH &&
+  WORD_PATTERN.test(value);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46,14 +47,20 @@ export function getSpeed(state: Pick<GameState, "typed" | "misses">): number {
   return Math.min(speed, MAX_SPEED);
 }
 
-function spawnWord(state: GameState, random: Random): GameState {
-  const free = WORDS.filter((word) => !state.items.includes(word));
-  const word = free[Math.floor(random() * free.length)];
+function spawnWord(state: GameState, pool: readonly string[]): GameState {
+  const free = pool.filter((word) => !state.items.includes(word));
+  if (free.length === 0) return state;
+  const [value, seed] = nextRandom(state.seed);
+  const word = free[Math.floor(value * free.length)];
   if (word === undefined) return state;
-  return { ...state, items: [...state.items, word] };
+  return { ...state, seed, items: [...state.items, word] };
 }
 
-export function createGame(best = 0, random: Random = Math.random): GameState {
+export function createGame(
+  best: number,
+  pool: readonly string[],
+  seed: number
+): GameState {
   let state: GameState = {
     status: "playing",
     score: 0,
@@ -64,9 +71,10 @@ export function createGame(best = 0, random: Random = Math.random): GameState {
     draft: "",
     position: 0,
     direction: 1,
+    seed,
   };
   for (let i = 0; i < START_WORDS; i++) {
-    state = spawnWord(state, random);
+    state = spawnWord(state, pool);
   }
   return state;
 }
@@ -94,7 +102,7 @@ export function advance(
   state: GameState,
   dt: number,
   length: number,
-  random: Random = Math.random
+  pool: readonly string[]
 ): GameState {
   if (state.status !== "playing") return state;
 
@@ -112,7 +120,7 @@ export function advance(
   };
   const spawns = next.items.length === 0 ? Math.max(bounces, 1) : bounces;
   for (let i = 0; i < spawns && next.items.length <= MAX_WORDS; i++) {
-    next = spawnWord(next, random);
+    next = spawnWord(next, pool);
   }
   return next.items.length > MAX_WORDS ? { ...next, status: "over" } : next;
 }
@@ -120,7 +128,7 @@ export function advance(
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "tick":
-      return advance(state, action.dt, FIELD_WIDTH, () => action.roll);
+      return advance(state, action.dt, FIELD_WIDTH, action.pool);
     case "input":
       if (state.status !== "playing") return state;
       return { ...state, draft: action.value.slice(0, MAX_DRAFT_LENGTH) };
@@ -129,11 +137,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return next === state ? state : { ...next, draft: "" };
     }
     case "restart":
-      return createGame(state.best, () => action.roll);
+      return createGame(state.best, action.pool, action.seed);
   }
 }
 
-function toGameState(data: unknown): GameState | null {
+function toGameState(data: unknown, seed: number): GameState | null {
   if (!isRecord(data)) return null;
   const { status, score, best, typed, misses, items, draft } = data;
   const { position, direction } = data;
@@ -146,12 +154,12 @@ function toGameState(data: unknown): GameState | null {
   if (direction !== 1 && direction !== -1) return null;
   if (typeof draft !== "string" || draft.length > MAX_DRAFT_LENGTH) return null;
   if (!Array.isArray(items) || items.length > MAX_WORDS + 1) return null;
-  if (!items.every(isKnownWord)) return null;
+  if (!items.every(isPlayableWord)) return null;
   if (new Set(items).size !== items.length) return null;
 
   if (best < score || misses > MAX_MISSES) return null;
   if (score < typed * MIN_WORD_LENGTH) return null;
-  if (score > typed * MAX_WORD_LENGTH * getLevel({ typed })) return null;
+  if (score > typed * MAX_DRAFT_LENGTH * getLevel({ typed })) return null;
   const lost = items.length > MAX_WORDS || misses >= MAX_MISSES;
   if (lost !== (status === "over")) return null;
 
@@ -165,13 +173,14 @@ function toGameState(data: unknown): GameState | null {
     draft,
     position,
     direction,
+    seed,
   };
 }
 
-export function parseSave(json: unknown): GameState | null {
+export function parseSave(json: unknown, seed: number): GameState | null {
   if (typeof json !== "string") return null;
   try {
-    return toGameState(JSON.parse(json));
+    return toGameState(JSON.parse(json), seed);
   } catch {
     return null;
   }

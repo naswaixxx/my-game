@@ -1,17 +1,12 @@
-import { memo } from "react";
 import { FIELD_WIDTH } from "../gameLogic.ts";
+import { useGameSelector } from "../store/GameContext.tsx";
 
 const BALL_SIZE = 30;
 
-interface GameFieldProps {
-  readonly position: number;
-  readonly over: boolean;
-}
+export function GameField() {
+  const position = useGameSelector((state) => state.position);
+  const over = useGameSelector((state) => state.status === "over");
 
-export const GameField = memo(function GameField({
-  position,
-  over,
-}: GameFieldProps) {
   return (
     <div id="game-area" className={over ? "over" : undefined}>
       <div
@@ -25,4 +20,4 @@ export const GameField = memo(function GameField({
       />
     </div>
   );
-});
+}

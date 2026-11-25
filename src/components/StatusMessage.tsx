@@ -1,12 +1,8 @@
-import { memo } from "react";
+import { useGameSelector } from "../store/GameContext.tsx";
 
-interface StatusMessageProps {
-  readonly over: boolean;
-}
+export function StatusMessage() {
+  const over = useGameSelector((state) => state.status === "over");
 
-export const StatusMessage = memo(function StatusMessage({
-  over,
-}: StatusMessageProps) {
   return (
     <p id="message" role="status">
       {over
@@ -14,4 +10,4 @@ export const StatusMessage = memo(function StatusMessage({
         : "Печатайте слово из списка и нажимайте Enter"}
     </p>
   );
-});
+}

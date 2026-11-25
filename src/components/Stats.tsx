@@ -1,49 +1,41 @@
-import { memo } from "react";
-import { MAX_MISSES, MAX_WORDS } from "../gameLogic.ts";
+import { MAX_MISSES, MAX_WORDS, getLevel, getSpeed } from "../gameLogic.ts";
+import { useGameSelector } from "../store/GameContext.tsx";
 
-interface StatsProps {
-  readonly score: number;
-  readonly best: number;
-  readonly level: number;
-  readonly speed: number;
-  readonly queued: number;
-  readonly misses: number;
-}
+export function Stats() {
+  const score = useGameSelector((state) => state.score);
+  const best = useGameSelector((state) => state.best);
+  const typed = useGameSelector((state) => state.typed);
+  const misses = useGameSelector((state) => state.misses);
+  const queued = useGameSelector((state) => state.items.length);
+  const level = getLevel({ typed });
+  const speed = getSpeed({ typed, misses });
 
-export const Stats = memo(function Stats({
-  score,
-  best,
-  level,
-  speed,
-  queued,
-  misses,
-}: StatsProps) {
   return (
-    <div className="stats">
-      <span>
+    <ul className="stats" aria-label="Статистика">
+      <li>
         Счёт <strong id="score">{score}</strong>
-      </span>
-      <span>
+      </li>
+      <li>
         Рекорд <strong id="best">{best}</strong>
-      </span>
-      <span>
+      </li>
+      <li>
         Уровень <strong id="level">{level}</strong>
-      </span>
-      <span>
+      </li>
+      <li>
         Скорость <strong id="speed">{speed}</strong> px/s
-      </span>
-      <span>
+      </li>
+      <li>
         Очередь{" "}
         <strong id="queue">
           {queued}/{MAX_WORDS}
         </strong>
-      </span>
-      <span>
+      </li>
+      <li>
         Ошибки{" "}
         <strong id="misses">
           {misses}/{MAX_MISSES}
         </strong>
-      </span>
-    </div>
+      </li>
+    </ul>
   );
-});
+}

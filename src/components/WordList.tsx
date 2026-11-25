@@ -1,14 +1,10 @@
-import { memo } from "react";
+import { normalizeWord } from "../gameLogic.ts";
+import { useGameSelector } from "../store/GameContext.tsx";
 
-interface WordListProps {
-  readonly items: readonly string[];
-  readonly prefix: string;
-}
+export function WordList() {
+  const items = useGameSelector((state) => state.items);
+  const prefix = normalizeWord(useGameSelector((state) => state.draft));
 
-export const WordList = memo(function WordList({
-  items,
-  prefix,
-}: WordListProps) {
   return (
     <ul id="words" aria-label="Слова в очереди">
       {items.map((word) => (
@@ -23,4 +19,4 @@ export const WordList = memo(function WordList({
       ))}
     </ul>
   );
-});
+}
